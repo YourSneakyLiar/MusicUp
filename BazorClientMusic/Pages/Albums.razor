@@ -1,0 +1,162 @@
+﻿@page "/album/{Id:int}"
+@inject NavigationManager NavigationManager
+@using BazorClientMusic
+
+<div class="container">
+    <!-- Заголовок -->
+    <h1 class="text-center my-5" style="color: #4CAF50; font-weight: bold;">Треки в альбоме</h1>
+
+    <!-- Информация об альбоме -->
+    <div class="card shadow-sm mb-5" style="border-radius: 10px; border-color: #4CAF50;">
+        <div class="d-flex align-items-center">
+            <img src="https://ibb.org.ru/images/2024/12/16/a8cc728c52b4f9f1c203f039f413a677.jpg" class="card-img-top me-3" alt="Обложка альбома" style="width: 120px; height: 120px; border-radius: 10px;">
+            <div>
+                <h2 class="card-title" style="color: #333; font-weight: bold;">Альбом: @album.Title</h2>
+                <p class="card-text"><strong>Дата выпуска:</strong> @album.ReleaseDate.ToShortDateString()</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список треков -->
+    <!-- Песня 1 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+
+            <img src="https://ibb.org.ru/images/2024/12/16/IZOBRAZENIE_2024-12-16_114813503.png" class="card-img-top me-3" alt="Обложка Rocking Nights" style="width: 100px; height: 100px; border-radius: 10px;">
+
+            <div class="card-body">
+
+                <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">Shining Star</h5>
+                <p class="card-text" style="color: #6c757d;"><strong>Исполнитель:</strong> jane_music</p>
+
+                <!-- Проигрыватель с прямой ссылкой на аудио -->
+                <audio controls style="width: 100%; margin-top: 10px;">
+                    <source src="https://s2.deliciouspeaches.com/get/cuts/56/24/5624e85483a816027a0ca09dd2b8ec69/64686162/nbsplv_-_Shining_Star_b128f0d193.mp3" type="audio/mpeg">
+                    Ваш браузер не поддерживает проигрывание аудио.
+                </audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- Песня 2 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+
+            <img src="https://ibb.org.ru/images/2024/12/16/IZOBRAZENIE_2024-12-16_114828160.png" class="card-img-top me-3" alt="Обложка Rocking Nights" style="width: 100px; height: 100px; border-radius: 10px;">
+            <div class="card-body">
+                <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">Rocking Nights</h5>
+                <p class="card-text" style="color: #6c757d;"><strong>Исполнитель:</strong> alice_listener</p>
+
+                <!-- Проигрыватель с прямой ссылкой на аудио -->
+                <audio controls style="width: 100%; margin-top: 10px;">
+                    <source src="https://s2.deliciouspeaches.com/get/music/20200516/Atilla_Khan_-_Nights_69563758.mp3" type="audio/mpeg">
+                    Ваш браузер не поддерживает проигрывание аудио.
+                </audio>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public partial class Track
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public int? AlbumId { get; set; }
+
+        public int GenreId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string FilePath { get; set; } = null!;
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public partial class Album
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string? CoverImagePath { get; set; }
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+
+    }
+
+    public class TrackInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+    }
+
+    public class AlbumInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+    }
+
+    public Album album = new Album();
+    private List<Track> Tracks = new List<Track>();
+    private List<TrackInfo> TrackInfos = new List<TrackInfo>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //КЛИЕНТ ДЛЯ ОБРАЩЕНИЯ К АПИ
+        HttpClient client = new HttpClient();
+        client.BaseAddress = new Uri("https://webmusicapi.onrender.com/");
+
+        album = await client.GetFromJsonAsync<Album>($"api/Albums/{Id}");
+
+        HttpResponseMessage response = await client.GetAsync("api/Tracks");
+
+        if (response.IsSuccessStatusCode)
+        {
+            Tracks = (await response.Content.ReadFromJsonAsync<List<Track>>()).Where(t => t.AlbumId == Id).ToList() ?? new List<Track>();
+        }
+        else
+        {
+            Console.WriteLine("Ошибка");
+        }
+
+        foreach (var t in Tracks)
+        {
+            var atristName = (await client.GetFromJsonAsync<User>($"api/User/{t.Id}")).Username;
+
+            TrackInfos.Add
+            (
+                new TrackInfo
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        ArtistName = atristName
+                    }
+            );
+        }
+    }
+}

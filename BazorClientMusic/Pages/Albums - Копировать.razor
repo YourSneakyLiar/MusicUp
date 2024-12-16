@@ -1,0 +1,139 @@
+﻿@page "/album/{Id:int}"
+@inject NavigationManager NavigationManager
+@using BazorClientMusic
+
+<div class="container">
+    <!-- Заголовок -->
+    <h1 class="text-center my-5" style="color: #4CAF50; font-weight: bold;">Треки в альбоме</h1>
+
+    <!-- Информация об альбоме -->
+    <div class="card shadow-sm mb-5" style="border-radius: 10px; border-color: #4CAF50;">
+        <div class="card-body">
+            <h2 class="card-title" style="color: #333; font-weight: bold;">Альбом: @album.Title</h2>
+            <p class="card-text"><strong>Дата выпуска:</strong> @album.ReleaseDate.ToShortDateString()</p>
+        </div>
+    </div>
+
+    <!-- Список треков -->
+    <h2 class="my-4" style="color: #333; font-weight: bold;">Треки</h2>
+    <div class="row">
+        @foreach (var track in TrackInfos)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">@track.Title</h5>
+                        <p class="card-text" style="color: #6c757d;"><strong>Исполнитель:</strong> @track.ArtistName</p>
+                        <button class="btn btn-success btn-sm">
+                            <i class="bi bi-music-note-beamed"></i> Подробнее
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public partial class Track
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public int? AlbumId { get; set; }
+
+        public int GenreId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string FilePath { get; set; } = null!;
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public partial class Album
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string? CoverImagePath { get; set; }
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+
+    }
+
+    public class TrackInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+    }
+
+    public class AlbumInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+    }
+
+    public Album album = new Album();
+    private List<Track> Tracks = new List<Track>();
+    private List<TrackInfo> TrackInfos = new List<TrackInfo>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //КЛИЕНТ ДЛЯ ОБРАЩЕНИЯ К АПИ
+        HttpClient client = new HttpClient();
+        client.BaseAddress = new Uri("https://webmusicapi.onrender.com/");
+
+        album = await client.GetFromJsonAsync<Album>($"api/Albums/{Id}");
+
+        HttpResponseMessage response = await client.GetAsync("api/Tracks");
+
+        if (response.IsSuccessStatusCode)
+        {
+            Tracks = (await response.Content.ReadFromJsonAsync<List<Track>>()).Where(t => t.AlbumId == Id).ToList() ?? new List<Track>();
+        }
+        else
+        {
+            Console.WriteLine("Ошибка");
+        }
+
+        foreach (var t in Tracks)
+        {
+            var atristName = (await client.GetFromJsonAsync<User>($"api/User/{t.Id}")).Username;
+
+            TrackInfos.Add
+            (
+                new TrackInfo
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        ArtistName = atristName
+                    }
+            );
+        }
+    }
+}

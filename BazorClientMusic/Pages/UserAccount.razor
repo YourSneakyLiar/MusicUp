@@ -1,0 +1,172 @@
+﻿@page "/user/{UserId:int}"
+@inject NavigationManager NavigationManager
+@using BazorClientMusic
+
+<div class="container">
+    <!-- Заголовок -->
+    <h1 class="text-center my-5" style="color: #4CAF50; font-weight: bold;">Аккаунт пользователя</h1>
+
+    <!-- Информация о пользователе -->
+    <div class="card shadow-sm mb-5" style="border-radius: 10px; border-color: #4CAF50;">
+        <div class="card-body">
+            <h2 class="card-title" style="color: #333; font-weight: bold;">Информация о пользователе</h2>
+            <p class="card-text"><strong>Имя:</strong> @user.Username</p>
+            <p class="card-text"><strong>Email:</strong> @user.Email</p>
+        </div>
+    </div>
+
+    <!-- Лайкнутые песни -->
+    <h2 class="my-4" style="color: #333; font-weight: bold;">Лайкнутые песни</h2>
+    <div class="row">
+        <!-- Песня 1 -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+
+                <img src="https://ibb.org.ru/images/2024/12/16/IZOBRAZENIE_2024-12-16_114813503.png" class="card-img-top me-3" alt="Обложка Rocking Nights" style="width: 100px; height: 100px; border-radius: 10px;">
+                
+                <div class="card-body">
+
+                    <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">Shining Star</h5>
+                    <p class="card-text" style="color: #6c757d;"><strong>Исполнитель:</strong> jane_music</p>
+
+                    <!-- Проигрыватель с прямой ссылкой на аудио -->
+                    <audio controls style="width: 100%; margin-top: 10px;">
+                        <source src="https://s2.deliciouspeaches.com/get/cuts/56/24/5624e85483a816027a0ca09dd2b8ec69/64686162/nbsplv_-_Shining_Star_b128f0d193.mp3" type="audio/mpeg">
+                        Ваш браузер не поддерживает проигрывание аудио.
+                    </audio>
+                </div>
+            </div>
+        </div>
+
+        <!-- Песня 2 -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+
+                <img src="https://ibb.org.ru/images/2024/12/16/IZOBRAZENIE_2024-12-16_114828160.png" class="card-img-top me-3" alt="Обложка Rocking Nights" style="width: 100px; height: 100px; border-radius: 10px;">
+                <div class="card-body">
+                    <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">Rocking Nights</h5>
+                    <p class="card-text" style="color: #6c757d;"><strong>Исполнитель:</strong> alice_listener</p>
+
+                    <!-- Проигрыватель с прямой ссылкой на аудио -->
+                    <audio controls style="width: 100%; margin-top: 10px;">
+                        <source src="https://s2.deliciouspeaches.com/get/music/20200516/Atilla_Khan_-_Nights_69563758.mp3" type="audio/mpeg">
+                        Ваш браузер не поддерживает проигрывание аудио.
+                    </audio>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Плейлисты -->
+    <h2 class="my-4" style="color: #333; font-weight: bold;">Плейлисты</h2>
+
+    @if (Playlists.Count == 0)
+    {
+        <!-- Плашка, если плейлисты отсутствуют -->
+        <div class="alert alert-warning" role="alert" style="border-radius: 10px;">
+            <i class="bi bi-exclamation-triangle-fill"></i> Пользователь ещё не добавил ни одного плейлиста.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var playlist in Playlists)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+                        <div class="card-body">
+                            <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">@playlist.Name</h5>
+                            <button class="btn btn-success btn-sm" @onclick="() => NavigateToPlaylist(playlist.Id)">
+                                <i class="bi bi-list-ul"></i> Подробнее
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Кнопка "Назад" -->
+    <div class="text-center mt-4">
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Назад
+        </button>
+    </div>
+</div>
+@code {
+    [Parameter] 
+    public int UserId { get; set; }
+
+
+    public partial class Track
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public int? AlbumId { get; set; }
+
+        public int GenreId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string FilePath { get; set; } = null!;
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public partial class Playlist
+    {
+        public int Id { get; set; }
+
+        public int ListenerId { get; set; }
+
+        public string Name { get; set; } = null!;
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+
+    }
+
+    public User user = new User();
+    private List<Track> Tracks = new List<Track>();
+    private List<Playlist> Playlists = new List<Playlist>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient client = new HttpClient();
+        client.BaseAddress = new Uri("https://webmusicapi.onrender.com/");
+
+        HttpResponseMessage response = await client.GetAsync($"api/User/{UserId}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            user = await response.Content.ReadFromJsonAsync<User>() ?? new User();
+        }
+        else
+        {
+            Console.WriteLine("Ошибка");
+        }
+    }
+
+    private void NavigateToTrack(int trackId)
+    {
+        NavigationManager.NavigateTo($"/track/{trackId}");
+    }
+
+    private void NavigateToPlaylist(int playlistId)
+    {
+        NavigationManager.NavigateTo($"/playlist/{playlistId}");
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

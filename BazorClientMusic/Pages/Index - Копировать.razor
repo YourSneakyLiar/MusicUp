@@ -1,0 +1,180 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+@using BazorClientMusic
+
+<div class="container">
+    <!-- Заголовок -->
+    <h1 class="text-center my-5" style="color: #4CAF50; font-weight: bold;">Добро пожаловать на WebMusicApi</h1>
+
+    <!-- Популярные песни -->
+    <h2 class="my-4" style="color: #333; font-weight: bold;">Популярные песни</h2>
+    <div class="row">
+        @foreach (var track in TrackInfos)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">@track.Title</h5>
+                        <p class="card-text" style="color: #6c757d;">Исполнитель: @track.ArtistName</p>
+                        <button class="btn btn-success btn-sm" @onclick="() => NavigateToTrack(track.Id)">
+                            <i class="bi bi-music-note-beamed"></i> Подробнее
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Разделительная полоска -->
+    <hr class="my-5" style="border-top: 2px solid #333; opacity: 1;" />
+
+    <!-- Популярные альбомы -->
+    <h2 class="my-4" style="color: #333; font-weight: bold;">Популярные альбомы</h2>
+    <div class="row">
+        @foreach (var album in AlbumInfos)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm" style="border-radius: 10px; border-color: #4CAF50;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color: #4CAF50; font-weight: bold;">@album.Title</h5>
+                        <p class="card-text" style="color: #6c757d;">Исполнитель: @album.ArtistName</p>
+                        <button class="btn btn-success btn-sm" @onclick="() => NavigateToAlbum(album.Id)">
+                            <i class="bi bi-disc"></i> Подробнее
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+
+    public partial class Track
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public int? AlbumId { get; set; }
+
+        public int GenreId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string FilePath { get; set; } = null!;
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public partial class Album
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+
+        public DateOnly ReleaseDate { get; set; }
+
+        public string? CoverImagePath { get; set; }
+
+        public DateTime? CreatedAt { get; set; }
+
+        public DateTime? UpdatedAt { get; set; }
+
+    }
+
+    public class TrackInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+    }
+
+    public class AlbumInfo
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; } = null!;
+
+        public string ArtistName { get; set; } = null!;
+
+        public int ArtistId { get; set; }
+    }
+
+
+    private List<Track> Tracks = new List<Track>();
+    private List<TrackInfo> TrackInfos = new List<TrackInfo>();
+
+    private List<Album> Albums = new List<Album>();
+    public List<AlbumInfo> AlbumInfos = new List<AlbumInfo>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Используем один экземпляр HttpClient
+        using HttpClient client = new HttpClient
+            {
+                BaseAddress = new Uri("https://webmusicapi.onrender.com/")
+            };
+
+        // Параллельное выполнение запросов
+        var tracksTask = client.GetFromJsonAsync<List<Track>>("api/Tracks");
+        var albumsTask = client.GetFromJsonAsync<List<Album>>("api/Albums");
+
+        await Task.WhenAll(tracksTask, albumsTask);
+
+        var tracks = tracksTask.Result ?? new List<Track>();
+        var albums = albumsTask.Result ?? new List<Album>();
+
+        // Параллельное получение информации о треках
+        var trackInfoTasks = tracks.Select(async t =>
+        {
+            var user = await client.GetFromJsonAsync<User>($"api/User/{t.Id}").ConfigureAwait(false);
+            return new TrackInfo
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    ArtistName = user?.Username
+                };
+        }).ToList();
+
+        // Параллельное получение информации о альбомах
+        var albumInfoTasks = albums.Select(async a =>
+        {
+            var user = await client.GetFromJsonAsync<User>($"api/User/{a.Id}").ConfigureAwait(false);
+            return new AlbumInfo
+                {
+                    Id = a.Id,
+                    ArtistId = a.ArtistId,
+                    Title = a.Title,
+                    ArtistName = user?.Username
+                };
+        }).ToList();
+
+        // Ожидаем завершения всех задач
+        var trackInfos = await Task.WhenAll(trackInfoTasks);
+        var albumInfos = await Task.WhenAll(albumInfoTasks);
+
+        // Добавляем результаты в списки
+        TrackInfos.AddRange(trackInfos);
+        AlbumInfos.AddRange(albumInfos);
+    }
+
+    private void NavigateToTrack(int trackId)
+    {
+        NavigationManager.NavigateTo($"/user/{trackId}");
+    }
+
+    private void NavigateToAlbum(int artistId)
+    {
+        NavigationManager.NavigateTo($"/album/{artistId}");
+    }
+}
