@@ -58,6 +58,16 @@
 
 </div>
 
+
+
+ <!-- Кнопка "Назад" -->
+    <div class="text-center mt-4">
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Назад
+        </button>
+    </div>
+
+
 @code {
     [Parameter]
     public int Id { get; set; }
@@ -158,5 +168,14 @@
                     }
             );
         }
+
+
+
+    }
+
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
     }
 }
